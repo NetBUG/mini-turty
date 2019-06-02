@@ -1,0 +1,32 @@
+<launch>
+  <arg name="custom_param_file" default="$(find mini_turty3)/param/dummy.yaml"/>
+<!-- JJ - add mini-turty robot model, state publishers -->
+  <arg name="model" />
+  <arg name="gui" default="False" />
+  <param name="robot_description" textfile="$(find mini_turty3)/launch/mini_turty.urdf" />
+  <param name="use_gui" value="$(arg gui)"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" ></node>
+<!-- Map server -->
+<!-- JJ -->
+  <arg name="initial_pose_x" default="0.0"/> <!-- Use 17.0 for willow's map in simulation -->
+  <arg name="initial_pose_y" default="0.0"/> <!-- Use 17.0 for willow's map in simulation -->
+  <arg name="initial_pose_a" default="0.0"/>
+<!-- JJ  <include file="$(find turtlebot_navigation)/launch/includes/amcl.launch.xml"> -->
+  <include file="$(find mini_turty3)/launch/includes/amcl_rd.launch.xml">
+    <arg name="initial_pose_x" value="$(arg initial_pose_x)"/>
+    <arg name="initial_pose_y" value="$(arg initial_pose_y)"/>
+    <arg name="initial_pose_a" value="$(arg initial_pose_a)"/>
+  </include>
+<!-- JJ -->
+  <include file="$(find mini_turty3)/launch/includes/move_base_rd.launch.xml">
+    <arg name="custom_param_file" value="$(arg custom_param_file)"/>
+  </include>
+
+<!-- JJ - added mini3 base -->
+  <node pkg="mini_turty3" type="mini_turty3" name="mini_turty3">
+    <param name="enable_odom_transform" value="1"/>
+  </node>
+
+</launch>
+
