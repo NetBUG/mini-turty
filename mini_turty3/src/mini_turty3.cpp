@@ -21,11 +21,10 @@ NOTE - Must start 'pigpiod' daemon first:
 #define MINI_USE_CONSOLE 1
 
 // GPIO pin assignments
-//#define GPIO_SLEEP 16
 #define GPIO_SLEEP 13
-#define GPIO_DIR0  17
+#define GPIO_DIR0  20
 #define GPIO_DIR1  26
-#define GPIO_STEP0 18
+#define GPIO_STEP0 16
 #define GPIO_STEP1 19
 
 #define MOTOR_SPEED_SLEW_SIZE 0.1 // rate of change of motor speed (in m/s)
