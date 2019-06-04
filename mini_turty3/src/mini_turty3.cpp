@@ -27,7 +27,7 @@ NOTE - Must start 'pigpiod' daemon first:
 #define GPIO_STEP0 16
 #define GPIO_STEP1 19
 
-#define MOTOR_SPEED_SLEW_SIZE 0.1 // rate of change of motor speed (in m/s)
+#define MOTOR_SPEED_SLEW_SIZE 1.2 // rate of change of motor speed (in m/s)
 
 typedef enum DIFFDRIVE_MOTOR
 {
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
   }
 
   // set SLEEP (active low)
-  gpio_write(pi, GPIO_SLEEP, 0);
+  gpio_write(pi, GPIO_SLEEP, 1);
   
   pigpio_stop(pi);
 
@@ -243,9 +243,9 @@ void MiniTurtyBase::updateMotorControl(DIFFDRIVE_MOTOR motor_num)
   if(motors[DIFFDRIVE_MOTOR_LEFT].currentSpeed == 0 && 
      motors[DIFFDRIVE_MOTOR_RIGHT].currentSpeed == 0)
 #endif
-    gpio_write(pi, GPIO_SLEEP, 0); // set SLEEP (active low)
+    gpio_write(pi, GPIO_SLEEP, 1); // set SLEEP (active low)
   else
-    gpio_write(pi, GPIO_SLEEP, 1);
+    gpio_write(pi, GPIO_SLEEP, 0);
 
 #if 0
   ROS_WARN("Motor: %d, Current speed: %f, Target speed: %f", 
@@ -278,8 +278,8 @@ void MiniTurtyBase::publishOdom(const double vx, const double vth)
   static ros::Publisher odom_pub = node.advertise<nav_msgs::Odometry>("odom", 50);
 
 #if 1
-//  ROS_WARN("odom vx: %f, vy: %f, vth: %f\r", vx, vy, vth);
-  printf("odom vx: %f, vy: %f, vth: %f\n", vx, vy, vth);
+  ROS_INFO("odom vx: %f, vy: %f, vth: %f\r", vx, vy, vth);
+//  printf("odom vx: %f, vy: %f, vth: %f\n", vx, vy, vth);
 #endif
 
   // compute odometry in a typical way given the velocities of the robot
@@ -437,7 +437,7 @@ char processConsole(MiniTurtyBase *mini)
       right_motor_speed -= 0.1;
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
-      printf("Got BWD\n");
+      ROS_INFO("Got BWD\n");
       break;
     case 'f':
     case 0x41:
@@ -445,7 +445,7 @@ char processConsole(MiniTurtyBase *mini)
       right_motor_speed += 0.1;
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
-      printf("Got FWD\n");
+      ROS_INFO("Got FWD\n");
       break;
     case 'l':
     case 0x44:
@@ -458,7 +458,7 @@ char processConsole(MiniTurtyBase *mini)
 #endif
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
-      printf("Got LEFT\n");
+      ROS_INFO("Got LEFT\n");
       break;
     case 'r':
     case 0x43:
@@ -471,14 +471,14 @@ char processConsole(MiniTurtyBase *mini)
 #endif
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
-      printf("Got RIGHT\n");
+      ROS_INFO("Got RIGHT\n");
       break;
     case 's':
       left_motor_speed = 0.0;
       right_motor_speed = 0.0;
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
-      printf("Got STOP\n");
+      ROS_INFO("Got STOP\n");
       break;
 
       // JJ - add theta trim command
