@@ -9,6 +9,7 @@
 
 #include "pigpiod_if2.h"
 #include "ros/ros.h"
+#include <ros/console.h>
 #include "nav_msgs/Odometry.h"
 #include "tf/transform_broadcaster.h"
 
@@ -21,13 +22,14 @@ NOTE - Must start 'pigpiod' daemon first:
 #define MINI_USE_CONSOLE 1
 
 // GPIO pin assignments
-#define GPIO_SLEEP 13
-#define GPIO_DIR0  20
-#define GPIO_DIR1  26
-#define GPIO_STEP0 16
+#define GPIO_SLEEP 16
 #define GPIO_STEP1 19
+#define GPIO_DIR1  26
+#define GPIO_STEP0 13
+#define GPIO_DIR0  20
 
-#define MOTOR_SPEED_SLEW_SIZE 1.2 // rate of change of motor speed (in m/s)
+#define MOTOR_SPEED_SLEW_SIZE 0.45 // rate of change of motor speed (in m/s)
+#define MAX_DEFAULT_SPEED 16
 
 typedef enum DIFFDRIVE_MOTOR
 {
@@ -44,7 +46,7 @@ typedef struct Motor_t {
 class MiniTurtyBase
 {
   public:
-    MiniTurtyBase(int the_pi);
+    MiniTurtyBase(int the_pi, float max_speed);
     virtual ~MiniTurtyBase() {};
 
     void setEnableOdomTransform(const bool enabled);
@@ -59,6 +61,7 @@ class MiniTurtyBase
 
   private:
     int pi;
+    float max_speed;
     ros::NodeHandle node;
     ros::Subscriber cmd_vel_sub;
     ros::Timer timer;
@@ -83,11 +86,11 @@ int main(int argc, char *argv[])
 {
   int pi;
   
-  printf("Hello!\n");
+  ROS_WARN("Hello!\n");
 
   pi = init_gpio();
   if(pi) {
-    printf("Error initializing pigpio!\n");
+    ROS_ERROR("Error initializing pigpio!\n");
     return pi;
   }
 
@@ -102,20 +105,15 @@ int main(int argc, char *argv[])
   ros::NodeHandle private_node_handle_("~");
   ros::Rate loop_rate(10);
 
-// JJ - provide odom transform
-#if 1
   int enable_odom_transform;
-
-//  private_node_handle_.param("enable_odom_transform", enable_odom_transform, int(0));
+  float max_speed;
   private_node_handle_.param("enable_odom_transform", enable_odom_transform, int(1));
-#endif
+  private_node_handle_.param("max_speed", max_speed, float(MAX_DEFAULT_SPEED));
 
-  MiniTurtyBase mini(pi);
+  MiniTurtyBase mini(pi, max_speed);
   mini.setCmdVelTopic("cmd_vel");
-// JJ - provide odom transform
-#if 1
   mini.setEnableOdomTransform(enable_odom_transform);
-#endif
+  mini.setEnableOdomTransform(enable_odom_transform);
 
   while (ros::ok()) 
   {
@@ -150,7 +148,7 @@ int main(int argc, char *argv[])
 /*---------------------------------------------------------------------
  *
  *---------------------------------------------------------------------*/
-MiniTurtyBase::MiniTurtyBase(int the_pi)
+MiniTurtyBase::MiniTurtyBase(int the_pi, float max_speed)
 {
   pi = the_pi;
 
@@ -217,17 +215,17 @@ void MiniTurtyBase::updateMotorControl(DIFFDRIVE_MOTOR motor_num)
   {
   case DIFFDRIVE_MOTOR_LEFT:
     if(currentSpeed < 0) 
-      gpio_write(pi, GPIO_DIR1, 1); // set DIRECTION
+      gpio_write(pi, GPIO_DIR1, 0); // set DIRECTION
     else
-      gpio_write(pi, GPIO_DIR1, 0);
+      gpio_write(pi, GPIO_DIR1, 1);
 //    hardware_PWM(pi, GPIO_STEP1, abs((int16_t)(currentSpeed*1000.0)), 500000);
     hardware_PWM(pi, GPIO_STEP1, abs((int16_t)(currentSpeed*2000.0)), 500000);
     break;
   case DIFFDRIVE_MOTOR_RIGHT:
     if(currentSpeed < 0) 
-      gpio_write(pi, GPIO_DIR0, 0); // set DIRECTION
+      gpio_write(pi, GPIO_DIR0, 1); // set DIRECTION
     else
-      gpio_write(pi, GPIO_DIR0, 1);
+      gpio_write(pi, GPIO_DIR0, 0);
 //    hardware_PWM(pi, GPIO_STEP0, abs((int16_t)(currentSpeed*1000.0)), 500000);
     hardware_PWM(pi, GPIO_STEP0, abs((int16_t)(currentSpeed*2000.0)), 500000);
     break;
@@ -432,24 +430,38 @@ char processConsole(MiniTurtyBase *mini)
     switch (kbd_ch)
     {
     case 'b':
+      if (left_motor_speed > 0 && left_motor_speed < 4) left_motor_speed = 4;
+      if (right_motor_speed > 0 && right_motor_speed < 4) right_motor_speed = 4;
+      left_motor_speed -= 4;
+      right_motor_speed -= 4;
+      mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
+      mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
+      ROS_INFO("Got BWD\n");
+      break;
     case 0x42:
-      left_motor_speed -= 0.1;
-      right_motor_speed -= 0.1;
+      left_motor_speed -= 0.25;
+      right_motor_speed -= 0.25;
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
       ROS_INFO("Got BWD\n");
       break;
     case 'f':
+      left_motor_speed += 4;
+      right_motor_speed += 4;
+      mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
+      mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
+      ROS_INFO("Got FWD\n");
+      break;
     case 0x41:
-      left_motor_speed += 0.1;
-      right_motor_speed += 0.1;
+      left_motor_speed += 0.25;
+      right_motor_speed += 0.25;
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_LEFT, left_motor_speed);
       mini->setMotorSpeed(DIFFDRIVE_MOTOR_RIGHT, right_motor_speed);
       ROS_INFO("Got FWD\n");
       break;
     case 'l':
     case 0x44:
-#if 1
+#if false
       left_motor_speed -= 0.025;
       right_motor_speed += 0.025;
 #else
@@ -462,7 +474,7 @@ char processConsole(MiniTurtyBase *mini)
       break;
     case 'r':
     case 0x43:
-#if 1
+#if false
       left_motor_speed += 0.025;
       right_motor_speed -= 0.025;
 #else
