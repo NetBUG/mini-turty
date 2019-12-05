@@ -33,6 +33,11 @@ The following components have been fit on the upper board
  - An IR receiver
  - [Power controller board](mini_turty3/hw/controller)
 
+Drawings use the following coloring convention:
+ - black means the lines that have to be cut
+ - red means lines denoting mounted parts dimensions and should be omitted when cutting (originally it was used as pale dashed line)
+ - yellow originally denoted contours filled with yellow and was used in engraving mode to provide submerged areas to hide PCBs or screen frame
+
 ## Things You Can Do With Your Mini-Turty Robot
 
 There are many things you can do with your Mini-Turty robot, including:
